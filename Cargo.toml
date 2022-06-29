@@ -1,0 +1,11 @@
+[package]
+name = "pushwasm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base64 = "*"
+clap = { version = "3.2.7", features = ["derive"] }
+mysql = "*"
+rpassword = "*"
+url = "*"

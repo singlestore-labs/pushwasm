@@ -73,7 +73,7 @@ interactively:
 
 ```bash
 pushwasm \
-    mysql://username:password@dbhostname:3306/mydatabase \
+    mysql://username@dbhostname:3306/mydatabase \
     --prompt
     --wit work/mathfuncs.wit \
     work/mathfuncs.wasm \

@@ -47,6 +47,13 @@ fn main() {
                 .action(ArgAction::SetTrue),
         )
         .arg(
+            Arg::new("TVF")
+                .short('t')
+                .long("tvf")
+                .help("Deploy a TVF instead of a UDF")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new("PROMPT")
                 .short('p')
                 .long("prompt")
@@ -69,6 +76,7 @@ fn main() {
     let wit_path = matches.get_one::<PathBuf>("WITPATH");
     let abi = matches.get_one::<String>("ABITYPE");
     let force = *matches.get_one::<bool>("FORCE").unwrap_or_else(|| &false);
+    let tvf = *matches.get_one::<bool>("TVF").unwrap_or_else(|| &false);
     let prompt = *matches.get_one::<bool>("PROMPT").unwrap_or_else(|| &false);
     let has_wit = wit_path.is_some();
     
@@ -121,11 +129,11 @@ fn main() {
     if force {
         stmt_str += "OR REPLACE ";
     }
-    stmt_str += format!(
-        "FUNCTION {} AS WASM ABI {} FROM BASE64 ?",
-        func_name,
-        abi.unwrap(),
-    ).as_str();
+    stmt_str += format!("FUNCTION {} ", func_name).as_str();
+    if tvf {
+        stmt_str += "RETURNS TABLE ";
+    }
+    stmt_str += format!("AS WASM ABI {} FROM BASE64 ?", abi.unwrap()).as_str();
     if has_wit {
         stmt_str = stmt_str + " WITH WIT FROM BASE64 ?";
     }

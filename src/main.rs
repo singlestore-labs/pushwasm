@@ -177,5 +177,7 @@ fn main() {
         eprintln!("Error while creating UDF: {}", e);
         exit(1);
     }
-    println!("Wasm UDF '{}' was created successfully.", &func_name);
+    println!("Wasm {} '{}' was created successfully.", 
+        if tvf { "TVF" } else { "UDF" },
+        &func_name);
 }

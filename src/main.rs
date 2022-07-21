@@ -43,14 +43,14 @@ fn main() {
             Arg::new("FORCE")
                 .short('f')
                 .long("force")
-                .help("Replace UDF if it exists already")
+                .help("Replace UDF/TVF if it exists already")
                 .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("TVF")
                 .short('t')
                 .long("tvf")
-                .help("Deploy a TVF instead of a UDF")
+                .help("Deploy a TVF instead of a UDF/TVF")
                 .action(ArgAction::SetTrue),
         )
         .arg(
@@ -79,6 +79,7 @@ fn main() {
     let tvf = *matches.get_one::<bool>("TVF").unwrap_or_else(|| &false);
     let prompt = *matches.get_one::<bool>("PROMPT").unwrap_or_else(|| &false);
     let has_wit = wit_path.is_some();
+    let func_kind = if tvf { "TVF" } else { "UDF" };
     
     // Convert the connection specifier URL to a connection string.  If it 
     // begins with file://, we'll read the connection string from a file.
@@ -171,13 +172,15 @@ fn main() {
     let mut conn = conn.unwrap();
 
     // Execute the CREATE FUNCTION statement with the encoded Wasm and WIT data.
-    let p = (encoded_wasm, encoded_wit);
+    let mut p = vec![encoded_wasm];
+    if has_wit {
+        p.push(encoded_wit);
+    }
+    //let p = (encoded_wasm, encoded_wit);
     let exec_res = conn.exec::<String, _, _>(stmt_str, p);
     if let Err(e) = exec_res {
-        eprintln!("Error while creating UDF: {}", e);
+        eprintln!("Error while creating {}: {}", &func_kind, e);
         exit(1);
     }
-    println!("Wasm {} '{}' was created successfully.", 
-        if tvf { "TVF" } else { "UDF" },
-        &func_name);
+    println!("Wasm {} '{}' was created successfully.", &func_kind, &func_name);
 }

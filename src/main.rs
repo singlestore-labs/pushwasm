@@ -50,7 +50,7 @@ fn main() {
             Arg::new("TVF")
                 .short('t')
                 .long("tvf")
-                .help("Deploy a TVF instead of a UDF/TVF")
+                .help("Deploy a TVF instead of a UDF")
                 .action(ArgAction::SetTrue),
         )
         .arg(

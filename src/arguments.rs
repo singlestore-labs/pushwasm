@@ -1,6 +1,10 @@
+use base64::Engine;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::fmt::{Display, Formatter};
+use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
+use std::process::exit;
+use std::str::from_utf8;
 use url::Url;
 
 #[derive(Debug, Args)]
@@ -86,22 +90,50 @@ pub struct AggregateFunction {
         required = true
     )]
     pub state_type: String,
-    #[clap(
-        long,
-        help = "Initialization method ~ INITIALIZE WITH",
-        required = true
-    )]
-    pub init: String,
-    #[clap(long, help = "Update method ~ ITER WITH", required = true)]
-    pub iter: String,
-    #[clap(long, help = "Merge method ~ MERGE WITH", required = true)]
-    pub merge: String,
-    #[clap(long, help = "Terminate method ~ ITER WITH", required = true)]
-    pub terminate: String,
+    #[clap(flatten)]
+    pub aggregate_imports: Option<ManualAggregateImports>,
+}
+
+#[derive(Args, Clone)]
+pub struct ManualAggregateImports {
+    #[clap(long, help = "Initialization method ~ INITIALIZE WITH")]
+    pub init: Option<String>,
+    #[clap(long, help = "Update method ~ ITER WITH")]
+    pub iter: Option<String>,
+    #[clap(long, help = "Merge method ~ MERGE WITH")]
+    pub merge: Option<String>,
+    #[clap(long, help = "Terminate method ~ ITER WITH")]
+    pub terminate: Option<String>,
     #[clap(long, help = "Serialize method ~ SERIALIZE WITH")]
     pub serialize: Option<String>,
     #[clap(long, help = "Deserialize method ~ Deserialize WITH")]
     pub deserialize: Option<String>,
+}
+
+impl ManualAggregateImports {
+    pub fn exit_if_not_valid(&self) {
+        let exit_with = |name| {
+            eprintln!("Aggregate functions require a {name} functions");
+            exit(1);
+        };
+        if self.init.is_none() {
+            exit_with("init");
+        }
+        if self.iter.is_none() {
+            exit_with("iter");
+        }
+        if self.merge.is_none() {
+            exit_with("merge");
+        }
+        if self.terminate.is_none() {
+            exit_with("terminate");
+        }
+
+        if self.serialize.is_none() != self.serialize.is_none() {
+            eprintln!("Aggregate functions require both serialize and deserialize functions");
+            exit(1);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -109,6 +141,26 @@ pub enum ImportSource {
     Base64(String),
     Path(PathBuf),
     Url(Url),
+}
+
+impl ImportSource {
+    /// Unpacks the import source into a string.
+    pub fn unpack(&self) -> String {
+        match self {
+            ImportSource::Base64(base64) => {
+                let decoded = base64::engine::general_purpose::STANDARD
+                    .decode(base64)
+                    .expect("Invalid base64");
+                from_utf8(&decoded).expect("Invalid UTF-8").to_string()
+            }
+            ImportSource::Path(path) => read_to_string(path)
+                .expect("Could not read file")
+                .to_string(),
+            ImportSource::Url(_) => {
+                todo!("Downloading wit from URL is not supported!")
+            }
+        }
+    }
 }
 
 #[derive(Parser)]

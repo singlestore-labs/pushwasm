@@ -1,6 +1,10 @@
-use crate::arguments::{AggregateFunction, Functions, ImportSource, TableFunction, UserFunction};
+use crate::arguments::{
+    AggregateFunction, Functions, ImportSource, ManualAggregateImports, TableFunction, UserFunction,
+};
 use base64::Engine;
+use std::collections::HashMap;
 use std::fs;
+use std::process::exit;
 
 pub trait QueryBuilder {
     fn build(&self, args: &mut Vec<String>) -> String;
@@ -77,14 +81,39 @@ impl QueryBuilder for TableFunction {
 
 impl QueryBuilder for AggregateFunction {
     fn build(&self, args: &mut Vec<String>) -> String {
+        let imports = match self.aggregate_imports.as_ref() {
+            Some(imports) => imports.clone(),
+            None => {
+                if let Some(wit_source) = &self.shared.wit_source {
+                    // Try auto-detect from wit
+                    let functions = try_extract_member_functions_from_wit(wit_source.unpack());
+
+                    ManualAggregateImports {
+                        init: functions.get(&MemberFunction::Init).cloned(),
+                        iter: functions.get(&MemberFunction::Iterate).cloned(),
+                        merge: functions.get(&MemberFunction::Merge).cloned(),
+                        terminate: functions.get(&MemberFunction::Terminate).cloned(),
+                        serialize: functions.get(&MemberFunction::Serialize).cloned(),
+                        deserialize: functions.get(&MemberFunction::Deserialize).cloned(),
+                    }
+                } else {
+                    eprintln!("Cannot auto-detect functions without WIT source. Please specify a .wit file with --wit or manually provide the required functions.");
+                    exit(1);
+                }
+            }
+        };
+
+        // Validate the imports
+        imports.exit_if_not_valid();
+
         let wasm_source = self.shared.wasm_source.build(args);
         let wit_source = self
             .shared
             .wit_source
             .as_ref()
-            .map(|w| w.build(args))
+            .map(|w| format!("WITH WIT {}", w.build(args)))
             .unwrap_or_default();
-        let args = if args.len() == 1 {
+        let args = if self.args.len() == 1 {
             // The name of the argument is omitted for single args
             self.args[0].clone()
         } else {
@@ -122,16 +151,16 @@ impl QueryBuilder for AggregateFunction {
             return_type = self.return_type,
             state = self.state_type,
             abi = self.shared.abi_type,
-            init = self.init,
-            iter = self.iter,
-            merge = self.merge,
-            terminate = self.terminate,
-            serialize = self
+            init = imports.init.expect("Missing init function"),
+            iter = imports.iter.expect("Missing iterate function"),
+            merge = imports.merge.expect("Missing merge function"),
+            terminate = imports.terminate.expect("Missing terminate function"),
+            serialize = imports
                 .serialize
                 .as_ref()
                 .map(|s| format!("SERIALIZE WITH {}", s))
                 .unwrap_or_default(),
-            deserialize = self
+            deserialize = imports
                 .deserialize
                 .as_ref()
                 .map(|s| format!("DESERIALIZE WITH {}", s))
@@ -146,6 +175,59 @@ impl QueryBuilder for Functions {
             Functions::Udf(f) => f.build(args),
             Functions::Tvf(f) => f.build(args),
             Functions::Udaf(f) => f.build(args),
+        }
+    }
+}
+
+/// Automatically try to extract the aggregate member functions from the WIT spec.
+/// Note: This requires the specific members functions to contain relevant keywords in their name.
+fn try_extract_member_functions_from_wit(source: String) -> HashMap<MemberFunction, String> {
+    let mut functions = HashMap::new();
+    for line in source.lines() {
+        if line.contains("func(") {
+            // Take the string up to the first colon
+            if let Some(name) = line.split(':').next() {
+                if let Some(func) = MemberFunction::from_name(name) {
+                    if let Some(duplicate) = functions.insert(func, name.replace("-", "_")) {
+                        eprintln!("Duplicate match for function name: {name} vs {duplicate}");
+                        exit(1);
+                    }
+                }
+            }
+        }
+    }
+    functions
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+enum MemberFunction {
+    Init,
+    Iterate,
+    Merge,
+    Terminate,
+    Serialize,
+    Deserialize,
+}
+
+impl MemberFunction {
+    fn from_name(name: &str) -> Option<Self> {
+        if name.contains("wit") {
+            return None;
+        }
+        if name.contains("init") || name.contains("new") {
+            Some(Self::Init)
+        } else if name.contains("iter") || name.contains("update") || name.contains("add") {
+            Some(Self::Iterate)
+        } else if name.contains("merge") {
+            Some(Self::Merge)
+        } else if name.contains("terminate") || name.contains("get") || name.contains("finalize") {
+            Some(Self::Terminate)
+        } else if name.contains("deserialize") || name.contains("decode") {
+            Some(Self::Deserialize)
+        } else if name.contains("serialize") || name.contains("encode") {
+            Some(Self::Serialize)
+        } else {
+            None
         }
     }
 }

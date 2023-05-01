@@ -129,7 +129,7 @@ impl ManualAggregateImports {
             exit_with("terminate");
         }
 
-        if self.serialize.is_none() != self.serialize.is_none() {
+        if self.serialize.is_none() != self.deserialize.is_none() {
             eprintln!("Aggregate functions require both serialize and deserialize functions");
             exit(1);
         }

@@ -106,7 +106,7 @@ pub struct ManualAggregateImports {
     pub terminate: Option<String>,
     #[clap(long, help = "Serialize method ~ SERIALIZE WITH")]
     pub serialize: Option<String>,
-    #[clap(long, help = "Deserialize method ~ Deserialize WITH")]
+    #[clap(long, help = "Deserialize method ~ DESERIALIZE WITH")]
     pub deserialize: Option<String>,
 }
 

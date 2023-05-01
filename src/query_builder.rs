@@ -195,7 +195,7 @@ fn try_extract_member_functions_from_wit(source: String) -> HashMap<MemberFuncti
             // Take the string up to the first colon
             if let Some(name) = line.split(':').next() {
                 if let Some(func) = MemberFunction::from_name(name) {
-                    if let Some(duplicate) = functions.insert(func, name.replace("-", "_")) {
+                    if let Some(duplicate) = functions.insert(func, name.replace('-', "_")) {
                         eprintln!("Duplicate match for function name: {name} vs {duplicate}");
                         exit(1);
                     }

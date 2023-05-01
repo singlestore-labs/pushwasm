@@ -153,9 +153,7 @@ impl ImportSource {
                     .expect("Invalid base64");
                 from_utf8(&decoded).expect("Invalid UTF-8").to_string()
             }
-            ImportSource::Path(path) => read_to_string(path)
-                .expect("Could not read file")
-                .to_string(),
+            ImportSource::Path(path) => read_to_string(path).expect("Could not read file"),
             ImportSource::Url(_) => {
                 todo!("Downloading wit from URL is not supported!")
             }

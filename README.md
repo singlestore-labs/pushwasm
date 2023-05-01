@@ -11,74 +11,140 @@ Run:
 
 ## Usage
 
+```shell
+Push a Wasm module into SingleStoreDB.
+
+pushwasm <COMMAND>
+
+Commands:
+  udf   Creates a Wasm User-defined function
+  tvf   Creates a Wasm Table-valued function
+  udaf  Creates a Wasm User-defined aggregate function
+  help  Print this message or the help of the given subcommand(s)
 ```
-pushwasm [OPTIONS] <CONN> <WASMPATH> <FUNCNAME>
 
-ARGS:
-    <CONN>        Database connection information; must start with 'file://' or 'mysql://'.  If
-                  a file is provided, the connection string will be read from it.
-                  Example: mysql://user:pass@hostname:3306/dbname
-    <WASMPATH>    The Wasm module path
-    <FUNCNAME>    The Wasm function name
+```shell
+Creates a Wasm User-defined function
 
-OPTIONS:
-    -a, --abi <ABITYPE>    The ABI to use [default: canonical] [possible values: basic, canonical]
-    -f, --force            Replace UDF if it exists already
-    -h, --help             Print help information
-    -p, --prompt           Prompt to enter password on console
-    -w, --wit <WITPATH>    The WIT file path
+Usage: pushwasm udf [OPTIONS] --name <NAME> --wasm <WASM_SOURCE> --conn <CONNECTION>
+
+Options:
+  -n, --name <NAME>
+          Name of the function
+
+      --wasm <WASM_SOURCE>
+          Wasm import
+
+      --wit <WIT_SOURCE>
+          WIT import
+
+  -f, --force
+          Force replace existing function(s)
+
+  -p, --prompt
+          Prompt for password
+
+      --abi <ABI_TYPE>
+          ABI type
+          
+          [default: canonical]
+          [possible values: basic, canonical]
+
+  -c, --conn <CONNECTION>
+          Database connection string. Must begin with 'file://' or 'mysql://'
 ```
 
 ## Examples
 
-Create a UDF called `power_of` in SingleStoreDB from a Wasm module and WIT file
+Create a [UDF](https://docs.singlestore.com/managed-service/en/reference/code-engine---powered-by-wasm/create-wasm-udfs.html) called `power_of` in SingleStoreDB from a Wasm module and WIT file
 on the local file system using a connection string on the command line.
 
-```bash
-pushwasm \
-    mysql://username:password@dbhostname:3306/mydatabase \
+```shell
+pushwasm udf \
+    -n power_of \
+    --wasm work/mathfuncs.wasm \ 
     --wit work/mathfuncs.wit \
-    work/mathfuncs.wasm \
-    power_of
+    --abi canonical \
+    --conn 'mysql://username:password@dbhostname:3306/mydatabase'
 ```
 
 Create a UDF called `power_of` in SingleStoreDB from a Wasm module and WIT file
 on the local file system using a connection string on the command line and replacing what was there previously.
 
-```bash
-pushwasm \
-    mysql://username:password@dbhostname:3306/mydatabase \
+```shell
+pushwasm udf \
+    -n power_of \
     --force \
+    --wasm work/mathfuncs.wasm \ 
     --wit work/mathfuncs.wit \
-    work/mathfuncs.wasm \
-    power_of
+    --abi canonical \
+    --conn 'mysql://username:password@dbhostname:3306/mydatabase'
 ```
 
 Create a UDF called `power_of` in SingleStoreDB from a Wasm module and WIT file
 on the local file system using a connection string in a file.
 
-```bash
+```shell
 echo "mysql://username:password@dbhostname:3306/mydatabase" > /home/fred/conn-info.txt
 
-pushwasm \
-    file:///home/fred/conn-info.txt \
+pushwasm udf \
+    -n power_of \
+    --wasm work/mathfuncs.wasm \ 
     --wit work/mathfuncs.wit \
-    work/mathfuncs.wasm \
-    power_of
+    --abi canonical \
+    --conn 'file:///home/fred/conn-info.txt'
 ```
 
 Create a UDF called `power_of` in SingleStoreDB from a Wasm module and WIT file
 on the local file system using a connection string, but entering the password
 interactively:
 
-```bash
-pushwasm \
-    mysql://username@dbhostname:3306/mydatabase \
-    --prompt
+```shell
+pushwasm udf \
+    -n power_of \
+    --wasm work/mathfuncs.wasm \ 
     --wit work/mathfuncs.wit \
-    work/mathfuncs.wasm \
-    power_of
+    --abi canonical \
+    --prompt \
+    --conn 'mysql://username:password@dbhostname:3306/mydatabase'
 ```
+
+Creates a UDAF called `sum_of` in SingleStoreDB from a Wasm module and WIT file, by auto-deducing the relevant
+functions from WIT file:
+
+```shell
+pushwasm udaf \
+    -n sum_of \
+    --wasm work/aggfuncs.wasm \
+    --wit work/aggfuncs.wit \
+    --abi canonical \
+    --conn 'mysql://username:password@dbhostname:3306/mydatabase' \
+    --state 'int not null' \
+    --type 'int not null' \ 
+    --arg 'int not null'
+```
+
+Creates a [UDAF](https://docs.singlestore.com/managed-service/en/reference/sql-reference/procedural-sql-reference/create-aggregate.html) called `sum_of` in SingleStoreDB from a Wasm module and WIT file using HANDLE state & by manually
+specifying the member functions:
+
+```shell
+pushwasm udaf \
+    -n sum_of \
+    --wasm work/aggfuncs.wasm \
+    --wit work/aggfuncs.wit \
+    --abi canonical \
+    --conn 'mysql://username:password@dbhostname:3306/mydatabase' \
+    --state handle \
+    --type 'int not null' \ 
+    --arg 'int not null' \
+    --init handle_init \ 
+    --iter handle_add \ 
+    --merge handle_merge \ 
+    --terminate handle_get \ 
+    --serialize handle_serialize \
+     --deserialize handle_deserialize
+```
+
 
 ## About SingleStoreDB
 
@@ -87,7 +153,7 @@ pushwasm \
    [SingleStore portal](https://portal.singlestore.com/?utm_medium=osm&utm_source=github) and set it as an environment
    variable.
 
-   ```bash
+   ```shell
    export SINGLESTORE_LICENSE="singlestore license"
    ```
 

@@ -178,7 +178,7 @@ pub enum Functions {
     Udf(UserFunction),
     #[clap(name = "tvf")]
     Tvf(TableFunction),
-    #[clap(name = "agg")]
+    #[clap(name = "udaf")]
     Udaf(AggregateFunction),
 }
 

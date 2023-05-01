@@ -124,12 +124,19 @@ impl QueryBuilder for AggregateFunction {
                 format!("{var_name_as_letter} {arg_type}")
             };
 
-            self.args
+            let generated_args = self
+                .args
                 .iter()
                 .enumerate()
                 .map(generate_var_names)
-                .collect::<Vec<_>>()
-                .join(",")
+                .collect::<Vec<_>>();
+
+            if generated_args.len() > 26 {
+                eprintln!("Too many arguments for an aggregate function. Maximum is 26.");
+                exit(1);
+            }
+
+            generated_args.join(",")
         };
         format!(
             "

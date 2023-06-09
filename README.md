@@ -26,7 +26,7 @@ Commands:
 ```shell
 Creates a Wasm User-defined function
 
-Usage: pushwasm udf [OPTIONS] --name <NAME> --wasm <WASM_SOURCE> --conn <CONNECTION>
+Usage: pushwasm <COMMAND> [OPTIONS] --name <NAME> --wasm <WASM_SOURCE> --conn <CONNECTION>
 
 Options:
   -n, --name <NAME>

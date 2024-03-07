@@ -3,6 +3,11 @@ This is a command-line utility that will allows you to create a Wasm UDF in
 SingleStoreDB.  It will transfer a Wasm module, and, optionally, a WIT file,
 from the local file system to the database.
 
+**Attention**: The code in this repository is intended for experimental use 
+only and is not fully tested, documented, or supported by SingleStore. 
+Visit the [SingleStore Forums](https://www.singlestore.com/forum/) to ask questions about this repository.
+
+
 ## Compiling
 
 Run:
